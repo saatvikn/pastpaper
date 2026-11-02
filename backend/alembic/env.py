@@ -13,9 +13,20 @@ from app.models.course import Course
 # access to the values within the .ini file in use.
 config = context.config
 
+database = context.get_x_argument(as_dictionary=True).get("database", "dev")
+
+if database == "test":
+    if not settings.test_database_url:
+        raise ValueError("TEST_DATABASE_URL is required")
+    database_url = settings.test_database_url
+elif database == "dev":
+    database_url = settings.database_url
+else:
+    raise ValueError("database must be 'dev' or 'test'")
+
 config.set_main_option(
     "sqlalchemy.url",
-    settings.database_url.replace("%", "%%"),
+    database_url.replace("%", "%%"),
 )
 
 # Interpret the config file for Python logging.
