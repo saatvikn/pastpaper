@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.database import get_db
 from app.models.course import Course
@@ -26,6 +27,47 @@ def create_paper(payload: PaperCreate, db: Session = Depends(get_db)):
     db.add(paper)
     db.commit()
     db.refresh(paper)
+
+    return {
+        "id": paper.id,
+        "course_id": paper.course_id,
+        "year": paper.year,
+        "exam_type": paper.exam_type,
+    }
+
+
+@router.get("")
+def list_papers(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+):
+    statement = select(Paper).order_by(Paper.id).offset(offset).limit(limit)
+    papers = db.scalars(statement).all()
+
+    return [
+        {
+            "id": paper.id,
+            "course_id": paper.course_id,
+            "year": paper.year,
+            "exam_type": paper.exam_type,
+        }
+        for paper in papers
+    ]
+
+
+@router.get("/{paper_id}")
+def get_paper(
+    paper_id: int = Path(gt=0),
+    db: Session = Depends(get_db),
+):
+    paper = db.get(Paper, paper_id)
+
+    if paper is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Paper not found",
+        )
 
     return {
         "id": paper.id,
