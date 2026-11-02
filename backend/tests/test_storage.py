@@ -1,5 +1,6 @@
 from app.services.storage import save_pdf_stream
 from io import BytesIO
+from hashlib import sha256
 import pytest
 
 from app.services.storage import CHUNK_SIZE, UploadTooLargeError, copy_with_limit
@@ -9,22 +10,31 @@ def test_save_pdf_stream(tmp_path):
     content = b"storage test"
     folder = tmp_path / "papers"
 
-    key, size = save_pdf_stream(BytesIO(content), folder, max_bytes=len(content))
+    key, size, content_hash = save_pdf_stream(
+        BytesIO(content), folder, max_bytes=len(content)
+    )
     assert (folder / key).read_bytes() == content
     assert size == len(content)
 
-    another_key, _ = save_pdf_stream(BytesIO(content), folder, max_bytes=len(content))
+    another_key, _, another_hash = save_pdf_stream(
+        BytesIO(content), folder, max_bytes=len(content)
+    )
     assert another_key != key
+    assert content_hash == sha256(content).hexdigest()
+    assert another_hash == content_hash
 
 
 def test_copy_with_limit_accepts_exact_limit():
     content = b"x" * (CHUNK_SIZE + 3)
     destination = BytesIO()
 
-    copied = copy_with_limit(BytesIO(content), destination, max_bytes=len(content))
+    copied, content_hash = copy_with_limit(
+        BytesIO(content), destination, max_bytes=len(content)
+    )
 
     assert copied == len(content)
     assert destination.getvalue() == content
+    assert content_hash == sha256(content).hexdigest()
 
 
 def test_copy_with_limit_rejects_oversize():
