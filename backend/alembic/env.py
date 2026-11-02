@@ -9,6 +9,7 @@ from app.config import settings
 from app.database import Base
 from app.models.course import Course
 from app.models.paper import Paper
+from app.models.processing_job import ProcessingJob
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
