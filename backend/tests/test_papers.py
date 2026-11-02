@@ -161,3 +161,39 @@ def test_get_paper_rejects_invalid_id(client, paper_id):
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["path", "paper_id"]
+
+
+@pytest.mark.parametrize(
+    "field,constraint_name",
+    [
+        ("storage_key", "uq_papers_storage_key"),
+        ("content_hash", "uq_papers_content_hash"),
+    ],
+)
+def test_paper_file_metadata_is_unique(test_engine, field, constraint_name):
+    with Session(test_engine) as db:
+        course = Course(code="OS101", name="Operating Systems")
+        db.add(course)
+        db.flush()
+
+        first_values = {
+            "course_id": course.id,
+            "year": 2025,
+            "exam_type": "midsem",
+            "storage_key": "first.pdf",
+            "content_hash": "a" * 64,
+        }
+        db.add(Paper(**first_values))
+        db.flush()
+
+        second_values = first_values.copy()
+        second_values["storage_key"] = "second.pdf"
+        second_values["content_hash"] = "b" * 64
+        second_values[field] = first_values[field]
+
+        db.add(Paper(**second_values))
+        with pytest.raises(IntegrityError) as error:
+            db.flush()
+
+        db.rollback()
+        assert error.value.orig.diag.constraint_name == constraint_name

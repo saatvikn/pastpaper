@@ -14,3 +14,8 @@ class Paper(Base):
     )
     year: Mapped[int]
     exam_type: Mapped[str] = mapped_column(String(20))
+    original_filename: Mapped[str | None] = mapped_column(String(255))
+    storage_key: Mapped[str | None] = mapped_column(String(255), unique=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), unique=True)
+    file_size: Mapped[int | None]
+    page_count: Mapped[int | None]
